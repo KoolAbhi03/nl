@@ -7,7 +7,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await AuthMethods.initializeFirebase();
-  runApp(const MaterialApp(
-    home: SplashScreen(),
+  runApp(MaterialApp(
+    home: const SplashScreen(),
   ));
 }

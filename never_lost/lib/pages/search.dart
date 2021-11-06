@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:never_lost/auth/database.dart';
 import 'package:never_lost/auth/userauth.dart';
 import 'package:never_lost/components/color.dart';
+import 'package:never_lost/components/loading.dart';
+import 'package:never_lost/components/userprofile.dart';
 
 class Search extends StatefulWidget {
-  const Search({Key? key}) : super(key: key);
+  final user;
+  const Search({Key? key, required this.user}) : super(key: key);
 
   @override
   _SearchState createState() => _SearchState();
@@ -12,10 +15,17 @@ class Search extends StatefulWidget {
 
 class _SearchState extends State<Search> {
   final searchController = TextEditingController();
-  List ispressed = [true, false, false];
+  List ispressed = [true, false];
   List<IconData> iconState = [Icons.person, Icons.email_rounded, Icons.phone];
   int currentIndex = 0;
-  List<String> listState = ['name', 'email', 'phone'];
+  List<String> listState = ['name', 'email'];
+  late Stream searchStream;
+  bool isSearching = false;
+  @override
+  void initState() {
+    super.initState();
+  }
+
   void onpress(int index) {
     if (!ispressed[index]) {
       setState(() {
@@ -24,6 +34,70 @@ class _SearchState extends State<Search> {
         currentIndex = index;
       });
     }
+    onsearch();
+  }
+
+  void onsearch() async {
+    isSearching = searchController.text != '' ? true : false;
+
+    switch (listState[currentIndex]) {
+      case 'name':
+        searchStream =
+            await DatabaseMethods().searchByName(searchController.text);
+        break;
+      case 'email':
+        searchStream =
+            await DatabaseMethods().searchByEmail(searchController.text);
+        break;
+    }
+
+    setState(() {});
+  }
+
+  Widget searchList() {
+    return StreamBuilder(
+      stream: searchStream,
+      builder: (context, AsyncSnapshot snapshot) {
+        return snapshot.hasData
+            ? ListView.builder(
+                shrinkWrap: true,
+                itemCount: snapshot.data.docs.length,
+                itemBuilder: (context, index) {
+                  var ds = snapshot.data.docs[index];
+                  return ds['email'] != widget.user['email']
+                      ? Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: ListTile(
+                            onTap: () {
+                              FocusScopeNode currentFocus =
+                                  FocusScope.of(context);
+                              if (!currentFocus.hasPrimaryFocus) {
+                                currentFocus.unfocus();
+                              }
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => UserProfile(
+                                            currentUser: widget.user,
+                                            searchedUser: ds,
+                                          )));
+                            },
+                            leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(100),
+                                child: Image.network(ds['photoURL'])),
+                            title: Text(ds['name'],
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(ds['email'],
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            trailing: Icon(Icons.chevron_right_rounded),
+                          ),
+                        )
+                      : Text('');
+                },
+              )
+            : Text('NO result found');
+      },
+    );
   }
 
   @override
@@ -47,7 +121,7 @@ class _SearchState extends State<Search> {
                   child: Row(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
                         child: Icon(
                           iconState[currentIndex],
                           color: themeColor2,
@@ -58,6 +132,9 @@ class _SearchState extends State<Search> {
                             controller: searchController,
                             cursorColor: themeColor2,
                             cursorHeight: 20,
+                            onChanged: (value) async {
+                              onsearch();
+                            },
                             style: const TextStyle(
                                 color: themeColor2, fontSize: 18),
                             decoration: InputDecoration(
@@ -69,22 +146,20 @@ class _SearchState extends State<Search> {
                                 helperStyle:
                                     const TextStyle(color: themeColor2))),
                       ),
-                      InkWell(
-                        onTap: () async {
-                          dynamic result;
-                          result = await UserAuth().search(
-                              listState[currentIndex], searchController.text);
-                          print(result);
-                          if (result != null) {
-                            print(result);
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        child: InkWell(
+                          onTap: () async {
                             searchController.clear();
-                          }
-                        },
-                        child: const CircleAvatar(
-                          backgroundColor: backgroundColor1,
+                            setState(() {
+                              isSearching = false;
+                            });
+                          },
                           child: Icon(
-                            Icons.search,
-                            color: iconColor2,
+                            searchController.text != ''
+                                ? Icons.close
+                                : Icons.search,
+                            color: iconcolor1,
                           ),
                         ),
                       )
@@ -143,30 +218,13 @@ class _SearchState extends State<Search> {
                                     ispressed[1] ? themeColor2 : themeColor1),
                           )),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                          color: ispressed[2] ? themeColor1 : themeColor2,
-                          borderRadius: BorderRadius.circular(5)),
-                      height: 40,
-                      width: 80,
-                      child: TextButton(
-                          style: ButtonStyle(
-                            overlayColor: MaterialStateColor.resolveWith(
-                                (states) => backgroundColor2.withOpacity(0.2)),
-                          ),
-                          onPressed: () {
-                            onpress(2);
-                          },
-                          child: Text('phone',
-                              style: TextStyle(
-                                  color: ispressed[2]
-                                      ? themeColor2
-                                      : themeColor1))),
-                    )
                   ],
                 ),
               ),
-            )
+            ),
+            isSearching
+                ? Expanded(child: searchList())
+                : Expanded(child: Text('Search Your Friends here'))
           ],
         ),
       ),

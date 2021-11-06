@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:never_lost/auth/database.dart';
 import 'package:never_lost/components/loading.dart';
 
 class MAp extends StatefulWidget {
@@ -13,7 +14,7 @@ class MAp extends StatefulWidget {
 }
 
 class _MApState extends State<MAp> {
-  Location location = new Location();
+  Location location = Location();
 
   late bool _serviceEnabled;
   late PermissionStatus _permissionGranted;
@@ -46,6 +47,7 @@ class _MApState extends State<MAp> {
     }
 
     _locationData = await location.getLocation();
+
     setState(() {
       lat = _locationData.latitude!;
       long = _locationData.longitude!;

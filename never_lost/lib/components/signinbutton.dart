@@ -23,8 +23,10 @@ class SignInButton extends StatelessWidget {
                     user.photoURL, user.phoneNumber)
                 .then((value) async {
               await HiveDB().updateUserData(value).then((v) {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => const Home()));
+                Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Home()),
+                    (route) => false);
               });
             });
           });

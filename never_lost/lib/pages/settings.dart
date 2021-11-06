@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:never_lost/auth/auth.dart';
 import 'package:never_lost/auth/database.dart';
 import 'package:never_lost/auth/hive.dart';
+import 'package:never_lost/auth/userauth.dart';
 import 'package:never_lost/components/color.dart';
 import 'package:never_lost/pages/signin.dart';
+import 'package:image_picker/image_picker.dart';
 
 class Settings extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -16,6 +18,19 @@ class Settings extends StatefulWidget {
 class _SettingsState extends State<Settings> {
   final phoneController = TextEditingController();
   final statusController = TextEditingController();
+  Future<void> _pickImage(ImageSource source) async {
+    final ImagePicker _picker = ImagePicker();
+    // Pick an image
+    final XFile? image =
+        await _picker.pickImage(source: source, imageQuality: 20);
+
+    String _imageFile = image!.path;
+    var val =
+        await UserAuth().changeProfilePhoto(_imageFile, widget.user['uid']);
+
+    return val;
+  }
+
   @override
   Widget build(BuildContext context) {
     var width = MediaQuery.of(context).size.width;
@@ -130,24 +145,86 @@ class _SettingsState extends State<Settings> {
                 children: [
                   InkWell(
                     onTap: () {
-                      showDialog(
-                          context: context,
-                          barrierDismissible: true,
-                          builder: (context) {
-                            return SimpleDialog(
-                                backgroundColor: Colors.transparent,
-                                children: [
-                                  Container(
-                                    width: width,
-                                    height: width,
-                                    decoration: BoxDecoration(
-                                        image: DecorationImage(
-                                            image: NetworkImage(
-                                                widget.user['photoURL']),
-                                            fit: BoxFit.fitWidth)),
-                                  ),
-                                ]);
-                          });
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        backgroundColor: backgroundColor1,
+                        content: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentSnackBar();
+                                showDialog(
+                                    context: context,
+                                    barrierDismissible: true,
+                                    builder: (context) {
+                                      return SimpleDialog(
+                                          backgroundColor: Colors.transparent,
+                                          children: [
+                                            Container(
+                                              width: width,
+                                              height: width,
+                                              decoration: BoxDecoration(
+                                                  image: DecorationImage(
+                                                      image: NetworkImage(widget
+                                                          .user['photoURL']),
+                                                      fit: BoxFit.fitWidth)),
+                                            ),
+                                          ]);
+                                    });
+                              },
+                              icon: Icon(
+                                Icons.photo,
+                              ),
+                              label: Text(
+                                'View',
+                                style: TextStyle(color: textColor2),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                _pickImage(ImageSource.gallery)
+                                    .then((value) {});
+                              },
+                              icon: Icon(
+                                Icons.photo_library,
+                              ),
+                              label: Text(
+                                'Gallery',
+                                style: TextStyle(color: textColor2),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {},
+                              icon: Icon(
+                                Icons.camera,
+                              ),
+                              label: Text(
+                                'Camera',
+                                style: TextStyle(color: textColor2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ));
+                      // showDialog(
+                      //     context: context,
+                      //     barrierDismissible: true,
+                      //     builder: (context) {
+                      //       return SimpleDialog(
+                      //           backgroundColor: Colors.transparent,
+                      //           children: [
+                      //             Container(
+                      //               width: width,
+                      //               height: width,
+                      //               decoration: BoxDecoration(
+                      //                   image: DecorationImage(
+                      //                       image: NetworkImage(
+                      //                           widget.user['photoURL']),
+                      //                       fit: BoxFit.fitWidth)),
+                      //             ),
+                      //           ]);
+                      //     });
                     },
                     child: SizedBox(
                       height: 100,

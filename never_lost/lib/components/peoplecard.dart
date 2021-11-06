@@ -6,8 +6,10 @@ import 'package:never_lost/components/notificationdot.dart';
 import 'package:never_lost/pages/chatroom.dart';
 
 class PeopleCard extends StatefulWidget {
-  final people;
-  const PeopleCard({Key? key, required this.people}) : super(key: key);
+  final currentUser, friendUser;
+  const PeopleCard(
+      {Key? key, required this.currentUser, required this.friendUser})
+      : super(key: key);
 
   @override
   _PeopleCardState createState() => _PeopleCardState();
@@ -49,8 +51,9 @@ class _PeopleCardState extends State<PeopleCard> {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              ChatRoom(name: 'Avishek Kumar')));
+                          builder: (context) => ChatRoom(
+                              currentUser: widget.currentUser,
+                              friendUser: widget.friendUser)));
                 },
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

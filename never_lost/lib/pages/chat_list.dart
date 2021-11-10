@@ -192,7 +192,8 @@ class _ChatListState extends State<ChatList> {
                                     trailing: Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
-                                      // crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         time(ds['timestamp']),
                                         messageCount(

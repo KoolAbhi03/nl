@@ -39,7 +39,12 @@
             android:value="2" />
         <meta-data android:name="com.google.android.geo.API_KEY"
                android:value="AIzaSyAXeu_XC4rRxM3PCioGaAI0YjIYcEAtwuA"/>
+               <activity
+    android:name="com.yalantis.ucrop.UCropActivity"
+    android:screenOrientation="portrait"
+    android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
     </application>
+    
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission android:name="android.permission.INTERNET"/>

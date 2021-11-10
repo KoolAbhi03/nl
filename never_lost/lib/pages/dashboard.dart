@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:never_lost/auth/auth.dart';
 import 'package:never_lost/auth/database.dart';
 import 'package:never_lost/auth/hive.dart';
@@ -9,7 +12,9 @@ import 'package:never_lost/components/pendingrequestbutton.dart';
 import 'package:never_lost/pages/group.dart';
 import 'package:never_lost/pages/chat_list.dart';
 import 'package:never_lost/pages/search.dart';
+import 'package:never_lost/pages/profile.dart';
 import 'package:never_lost/pages/settings.dart';
+import 'package:location/location.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key, required}) : super(key: key);
@@ -25,6 +30,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   Map<String, dynamic> user = {};
   bool isloading = true;
   late Stream userStream;
+  String uid = '';
+  late PermissionStatus _permissionGranted;
+  late LocationData _locationData;
+  Location location = Location();
+  late double lat;
+  late double long;
   @override
   void initState() {
     _tabController = TabController(length: 4, vsync: this, initialIndex: 0);
@@ -35,21 +46,58 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   void getUser() async {
     await HiveDB().getUserData().then((value) {
       setState(() {
-        user = value;
-        isloading = false;
-        print(user);
+        uid = value['uid'];
       });
-      getUserStream();
+      getUserData();
     });
   }
 
-  void getUserStream() async {
-    userStream = await DatabaseMethods().getUserSnapshots(user['uid']);
+  void getUserData() async {
+    await DatabaseMethods().getUserSnapshots(uid).listen((event) {
+      setState(() {
+        user = event.data()!;
+        isloading = false;
+      });
+    });
+    getlocation();
+  }
+
+  void getlocation() async {
+    bool _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _locationData = await location.getLocation();
+    location.onLocationChanged.listen((event) async {
+      setState(() {
+        lat = event.latitude!;
+        long = event.longitude!;
+      });
+      await DatabaseMethods().updateUserLocation(user['uid'], lat, long);
+    });
+    setState(() {
+      lat = _locationData.latitude!;
+      long = _locationData.longitude!;
+    });
+
+    await DatabaseMethods().updateUserLocation(user['uid'], lat, long);
   }
 
   Widget notificationButton() {
     return StreamBuilder(
-        stream: userStream,
+        stream: DatabaseMethods().getUserSnapshots(uid),
         builder: (context, AsyncSnapshot snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting)
             return NotificationBell(
@@ -57,7 +105,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
               requestList: [],
               currentUserUid: user['uid'],
             );
-          print(snapshot.data['pendingRequestList']);
           return NotificationBell(
             num: snapshot.data['pendingRequestList'].length,
             requestList: snapshot.data['pendingRequestList'],
@@ -93,22 +140,24 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 ),
                 actions: [
                   notificationButton(),
-                  // IconButton(
-                  //     onPressed: () {},
-                  //     icon: Icon(
-                  //       Icons.notifications,
-                  //       color: iconColor2,
-                  //     )),
                   IconButton(
                       onPressed: () {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => Settings(user: user)));
+                                builder: (context) => Profile(user: user)));
                       },
                       icon: ClipRRect(
-                          borderRadius: BorderRadius.circular(100),
-                          child: Image.network(user['photoURL']))),
+                        borderRadius: BorderRadius.circular(100),
+                        child: ValueListenableBuilder(
+                            valueListenable:
+                                Hive.box('IMAGEBOXKEY').listenable(),
+                            builder: (context, Box box, widget) {
+                              return box.get('IMAGEDATAKEY') != null
+                                  ? Image.file(File(box.get('IMAGEDATAKEY')))
+                                  : Image.network(user['photoURL']);
+                            }),
+                      ))
                 ],
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(80),
@@ -171,7 +220,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   Search(
                     user: user,
                   ),
-                  Loading()
+                  Settings(
+                    user: user['uid'],
+                  )
                 ],
               ),
             ),

@@ -9,10 +9,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:never_lost/pages/upload.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:image_cropper/image_cropper.dart';
+import 'dart:io';
 class Chats extends StatefulWidget {
-  final currentUser, friendUser;
-  const Chats({Key? key, required this.currentUser, required this.friendUser})
+  final currentUser, friendUser,chatRoomID;
+  const Chats({Key? key, required this.currentUser, required this.friendUser,required this.chatRoomID})
       : super(key: key);
 
   @override
@@ -21,41 +22,20 @@ class Chats extends StatefulWidget {
 
 class _ChatsState extends State<Chats> {
   final _messageController = TextEditingController();
-  String chatRoomID = '';
   late Stream messageStream;
   bool isLoading = true;
   @override
   void initState() {
-    createChatRoomID();
+    if(mounted){createChatRoom();}
     super.initState();
-  }
-
-  void createChatRoomID() async {
-    List tempList = [
-      widget.currentUser['email'].split('@')[0],
-      widget.friendUser['email'].split('@')[0]
-    ];
-    tempList.sort((a, b) => a.compareTo(b));
-    setState(() {
-      chatRoomID = tempList.join('_');
-    });
-    await createChatRoom().then((value) {
-      getMessages();
-    });
   }
 
   Future<void> createChatRoom() async {
     await DatabaseMethods().createChatRoom(
-        chatRoomID, widget.currentUser['email'], widget.friendUser['email']);
-  }
-
-  void getMessages() async {
-    await DatabaseMethods().getMessages(chatRoomID).then((value) {
-      setState(() {
-        messageStream = value;
-        isLoading = false;
-      });
-    });
+        widget.chatRoomID, widget.currentUser['email'], widget.friendUser['email']);
+        setState(() {
+          isLoading=false;
+        });
   }
 
   Future<void> _launchInBrowser(String url) async {
@@ -88,31 +68,42 @@ class _ChatsState extends State<Chats> {
       'isImage': false,
       'timestamp': DateTime.now(),
     };
-    DatabaseMethods().addMessage(chatRoomID, messageInfo, lastMessageInfo);
+    DatabaseMethods().addMessage(widget.chatRoomID, messageInfo, lastMessageInfo);
     _messageController.clear();
   }
 
   Future<void> _pickImage(ImageSource source) async {
     final ImagePicker _picker = ImagePicker();
     // Pick an image
-    final XFile? image = await _picker.pickImage(source: source);
+    final XFile? image =
+        await _picker.pickImage(source: source, imageQuality: 20);
+    File? croppedFile = await ImageCropper.cropImage(
+      cropStyle:CropStyle.rectangle
+        sourcePath: image!.path,
+        androidUiSettings: const AndroidUiSettings(
+            toolbarTitle: 'Send Image',
+            toolbarColor: backgroundColor1,
+            toolbarWidgetColor: Colors.white,
+            lockAspectRatio: false),
+        iosUiSettings: IOSUiSettings(
+          minimumAspectRatio: 1.0,
+        ));
 
     setState(() {
-      String _imageFile = image!.path;
       Navigator.push(
           context,
           MaterialPageRoute(
               builder: (context) => Uploader(
-                  chatRoomID: chatRoomID,
+                  chatRoomID: widget.chatRoomID,
                   currentUser: widget.currentUser,
                   friendUser: widget.friendUser,
-                  file: _imageFile)));
+                  image: croppedFile)));
     });
   }
 
   Widget messageList() {
     return StreamBuilder(
-      stream: messageStream,
+      stream: DatabaseMethods().getMessages(widget.chatRoomID),
       builder: (context, AsyncSnapshot snapshot) {
         return snapshot.hasData
             ? ListView.builder(
@@ -125,7 +116,7 @@ class _ChatsState extends State<Chats> {
                   bool sendbyMe = ds['sender'] == widget.currentUser['email'];
                   bool isUrl = Uri.parse(ds['message']).isAbsolute;
                   if (!sendbyMe) {
-                    DatabaseMethods().updateSeenInfo(chatRoomID, ds.id);
+                    DatabaseMethods().updateSeenInfo(widget.chatRoomID, ds.id);
                   }
                   return Wrap(
                     crossAxisAlignment: WrapCrossAlignment.end,
@@ -157,7 +148,9 @@ class _ChatsState extends State<Chats> {
                             }
                           },
                           child: ds['isImage'] == true
-                              ? Image.network(ds['message'])
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: Image.network(ds['message']))
                               : Text(
                                   ds['message'],
                                   style: TextStyle(

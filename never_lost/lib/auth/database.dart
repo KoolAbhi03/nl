@@ -17,6 +17,7 @@ class DatabaseMethods {
       "pendingRequestList": [],
       'latitude': 0.0,
       'longitude': 0.0,
+      'isShare': true
     };
     await findUserWithEmail(email).then((value) async {
       if (value.isEmpty) {
@@ -159,7 +160,8 @@ class DatabaseMethods {
       'receiver': user2,
       'seen': false,
       'timestamp': DateTime.now(),
-      'users': [user1, user2]
+      'users': [user1, user2],
+      'isSharing': [false, false]
     };
 
     await findChatRoom(chatRoomID).then((value) async {
@@ -186,14 +188,17 @@ class DatabaseMethods {
         .update(lastMessageInfo);
   }
 
-  Future<Stream<QuerySnapshot<Map<String, dynamic>>>> getMessages(
-      chatRoomID) async {
+  Stream<QuerySnapshot<Map<String, dynamic>>> getMessages(chatRoomID) {
     return firestore
         .collection('chatRooms')
         .doc(chatRoomID)
         .collection('chats')
         .orderBy('timestamp', descending: true)
         .snapshots();
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> chatRoomDetail(chatRoomID) {
+    return firestore.collection('chatRooms').doc(chatRoomID).snapshots();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getUnseenMessages(
@@ -229,5 +234,19 @@ class DatabaseMethods {
         .collection('users')
         .doc(uid)
         .update({'latitude': lat, 'longitude': long});
+  }
+
+  updateMasterLocationSharing(bool mastershare, uid) async {
+    return firestore
+        .collection('users')
+        .doc(uid)
+        .update({'isShare': !mastershare});
+  }
+
+  updatechatLocShare(chatRoomID, isShare) {
+    return firestore
+        .collection('chatRooms')
+        .doc(chatRoomID)
+        .update({'isSharing': isShare});
   }
 }

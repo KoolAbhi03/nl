@@ -11,11 +11,15 @@ class UserAuth {
         firebase_storage.FirebaseStorage.instanceFor(
             bucket: 'gs://never-lost-643e9.appspot.com');
 
-    /// Unique file name for the file
     File file = File(filep);
-    print(file);
     try {
-      String filepath = 'profilePhoto/${DateTime.now()}.png';
+      String filepath = 'profilePhoto/$userUID/$userUID.png';
+      await firebase_storage.FirebaseStorage.instance
+          .ref(filepath)
+          .delete()
+          .catchError((onerror) {
+        print('kya hi kr skte hai');
+      });
       await firebase_storage.FirebaseStorage.instance
           .ref(filepath)
           .putFile(file);
@@ -28,7 +32,7 @@ class UserAuth {
           .update({'photoURL': image});
       return image;
     } on firebase_core.FirebaseException catch (e) {
-      print('chat gaya');
+      print(e);
       return false;
     }
   }

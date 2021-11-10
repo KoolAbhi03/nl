@@ -4,12 +4,13 @@ import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/widgets.dart';
 import 'package:firebase_core/firebase_core.dart' as firebase_core;
 import 'package:never_lost/auth/database.dart';
+import 'package:never_lost/components/color.dart';
 
 class Uploader extends StatefulWidget {
-  final file, currentUser, friendUser, chatRoomID;
+  final image, currentUser, friendUser, chatRoomID;
   const Uploader(
       {Key? key,
-      required this.file,
+      required this.image,
       required this.currentUser,
       required this.friendUser,
       required this.chatRoomID})
@@ -23,14 +24,8 @@ class _UploaderState extends State<Uploader> {
   final firebase_storage.FirebaseStorage _storage =
       firebase_storage.FirebaseStorage.instanceFor(
           bucket: 'gs://never-lost-643e9.appspot.com');
-
-  /// Starts an upload task
   _startUpload() async {
-    print(widget.file);
-
-    /// Unique file name for the file
-    File file = File(widget.file);
-    print(file);
+    File file = File(widget.image.path);
     try {
       String filepath = 'chats/${DateTime.now()}.png';
       await firebase_storage.FirebaseStorage.instance
@@ -53,7 +48,7 @@ class _UploaderState extends State<Uploader> {
       'sender': widget.currentUser['email'],
       'receiver': widget.friendUser['email'],
       'seen': false,
-      'isImage':true,
+      'isImage': true,
       'timestamp': DateTime.now()
     };
     Map<String, dynamic> lastMessageInfo = {
@@ -61,7 +56,7 @@ class _UploaderState extends State<Uploader> {
       'sender': widget.currentUser['email'],
       'receiver': widget.friendUser['email'],
       'seen': false,
-      'isImage':true,
+      'isImage': true,
       'timestamp': DateTime.now(),
     };
     DatabaseMethods()
@@ -70,47 +65,31 @@ class _UploaderState extends State<Uploader> {
 
   @override
   Widget build(BuildContext context) {
-    // if (_uploadTask == '') {
-    //   /// Manage the task state and event subscription with a StreamBuilder
-    //   return StreamBuilder(
-    //       stream: _uploadTask.events,
-    //       builder: (_, snapshot) {
-
-    //         double progressPercent = event != null
-    //             ? event.bytesTransferred / event.totalByteCount
-    //             : 0;
-
-    //         return Column(
-    //           children: [
-    //             if (_uploadTask.isComplete) Text('🎉🎉🎉'),
-
-    //             if (_uploadTask.isPaused)
-    //               MaterialButton(
-    //                 child: Icon(Icons.play_arrow),
-    //                 onPressed: _uploadTask.resume,
-    //               ),
-
-    //             if (_uploadTask.isInProgress)
-    //               MaterialButton(
-    //                 child: Icon(Icons.pause),
-    //                 onPressed: _uploadTask.pause,
-    //               ),
-
-    //             // Progress bar
-    //             LinearProgressIndicator(value: progressPercent),
-    //             Text('${(progressPercent * 100).toStringAsFixed(2)} % '),
-    //           ],
-    //         );
-    //       });
-    // } else {
-    // Allows user to decide when to start the upload
-    return TextButton.icon(
-      label: Text('Upload to Firebase'),
-      icon: Icon(Icons.cloud_upload),
-      onPressed: () async {
-        _startUpload();
-        Navigator.pop(context);
-      },
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(),
+      body: Container(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        child: Column(
+          children: [
+            Container(
+              child: Image.file(widget.image),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: backgroundColor1,
+        onPressed: () {
+          _startUpload();
+          Navigator.pop(context);
+        },
+        child: Icon(
+          Icons.send,
+          color: iconColor2,
+        ),
+      ),
     );
     //}
   }
